@@ -52,6 +52,11 @@ def embedding(image, code, usable, unusable, uvList = [(2, 3), (3, 2)]):
             if((rowCount + margin[0], j + margin[1]) in usable):
                 block = coef[8*(i+margin[0]) : 8*(i+margin[0]+1), 8*(j+margin[1]) : 8*(j+margin[1]+1)]
                 block[0, 0] = int(block[0, 0]) + 200
+                #block[2, 3] = setParity(block[2, 3], code[usableCount // len(code[0])][usableCount % len(code[0])])
+                block[3, 2] = setParity(block[3, 2], code[usableCount // len(code[0])][usableCount % len(code[0])])
+                #for(u, v) in uvList:
+                    #block[u, v] = setParity(block[u][v], code[usableCount // len(code[0])][usableCount % len(code[0])])]
+                    #block[u, v] = 5
                 usableCount += 1
 
             if(usableCount % len(code[0]) == 0):
