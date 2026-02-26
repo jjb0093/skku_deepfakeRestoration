@@ -20,7 +20,10 @@ DLL_EXPORT int embedding(
 	const unsigned char* usable,
 	int marginX, int marginY,
 	const int (*uvList)[2], int uvCount,
-	int qrSize, int allumer) {
+	int qrSize, int allumerF, int allumerS,
+	int bbox_x1, int bbox_y1,
+	int bbox_x2, int bbox_y2
+	) {
 
 	//printf("Start Working\n");
 
@@ -57,7 +60,34 @@ DLL_EXPORT int embedding(
 
 	//printf("Insert Stegano\n");
 
-	int dcAdd = (allumer == 1) ? 200 : 0;
+	int bx1 = bbox_x1 / 8;
+	int bx2 = (bbox_x2 - 1) / 8;
+	int by1 = bbox_y1 / 8;
+	int by2 = (bbox_y2 - 1) / 8;
+
+	int frontiereUV[2][2] = { {1, 2}, {2, 1} };
+
+	for (int by = by1; by <= by2; by++) {
+		JBLOCKARRAY row = (JBLOCKARRAY)(*src.mem->access_virt_barray)(
+			(j_common_ptr)&src, coefArrays[0], (JDIMENSION)by, (JDIMENSION)1, TRUE);
+
+		for (int bx = bx1; bx <= bx2; bx++) {
+			if(bx == bx1 || bx == bx2 || by == by1 || by == by2){
+				JBLOCK* blk = &row[0][bx];
+
+				for (int k = 0; k < 2; k++) {
+					int pos = frontiereUV[k][0] * 8 + frontiereUV[k][1];
+					(*blk)[pos] = (JCOEF)setParity((short)(*blk)[pos], 1);
+				}
+
+				if (allumerF) {
+					(*blk)[1] = (JCOEF)(200);
+				}
+			}
+		}
+	}
+
+	int dcAdd = (allumerS == 1) ? 200 : 0;
 
 	size_t usableCount = 0;
 	int rowCount = 0;
