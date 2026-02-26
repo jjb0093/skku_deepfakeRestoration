@@ -53,7 +53,7 @@ if(__name__ == "__main__"):
     h, w = imgJpeg.image_height, imgJpeg.image_width
     hc, wc = coef.shape
 
-    bbox = expandBbox(bbox, h, w, 0.15)
+    bbox = expandBbox(bbox, h, w, 0.2)
     usable = usableBlock(hc, wc, bbox)
 
     margin = [max(0, (bbox[0]//8) - (codeShape//2)), max(0, ((bbox[3]-bbox[1])//2//8) - (codeShape//2))]
@@ -72,7 +72,7 @@ if(__name__ == "__main__"):
         ct.POINTER(ct.c_ubyte), ct.c_size_t,
         ct.POINTER(ct.c_ubyte),
         ct.c_int, ct.c_int,
-        ct.POINTER(uvPair), ct.c_int,
+        ct.POINTER(uvPair), ct.c_int, ct.c_int,
         ct.c_int, ct.c_int
     ]
     dll.embedding.restype = ct.c_int
@@ -83,7 +83,8 @@ if(__name__ == "__main__"):
     bitsPtr = codeBit.ctypes.data_as(ct.POINTER(ct.c_ubyte))
     usablePtr = usable.ctypes.data_as(ct.POINTER(ct.c_ubyte))
 
-    allumer = True
+    allumerF = True
+    allumerS = True
 
     result = dll.embedding(
         imgInputPath.encode("utf-8"),
@@ -92,7 +93,8 @@ if(__name__ == "__main__"):
         usablePtr,
         ct.c_int(margin[0]), ct.c_int(margin[1]),
         uvList, uvCount,
-        ct.c_int(codeShape), ct.c_int(1 if(allumer) else 0)
+        ct.c_int(codeShape), ct.c_int(1 if(allumerF) else 0), ct.c_int(1 if(allumerS) else 0),
+        ct.c_int(bbox[0]), ct.c_int(bbox[1]), ct.c_int(bbox[2]), ct.c_int(bbox[3]), 
     )
 
     print("Embedding Result =", result)
