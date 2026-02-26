@@ -53,14 +53,10 @@ if(__name__ == "__main__"):
     h, w = imgJpeg.image_height, imgJpeg.image_width
     hc, wc = coef.shape
 
-    bbox = expandBbox(bbox, h, w, 0.3)
+    bbox = expandBbox(bbox, h, w, 0.15)
     usable = usableBlock(hc, wc, bbox)
-    print(bbox)
 
-    #unusable = ((bbox[2]-bbox[0])//8) * ((bbox[3]-bbox[1])//8)
-
-    margin = [(bbox[2] - bbox[0]), 0]
-    print(margin)
+    margin = [max(0, (bbox[0]//8) - (codeShape//2)), max(0, ((bbox[3]-bbox[1])//2//8) - (codeShape//2))]
 
     print("coef.shape =", (hc, wc), "blocks =", (hc//8, wc//8), flush=True)
     print("usable.len =", len(usable), "usable.sum =", int(usable.sum()), flush=True)
