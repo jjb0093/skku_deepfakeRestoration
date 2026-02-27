@@ -83,8 +83,8 @@ if(__name__ == "__main__"):
     bitsPtr = codeBit.ctypes.data_as(ct.POINTER(ct.c_ubyte))
     usablePtr = usable.ctypes.data_as(ct.POINTER(ct.c_ubyte))
 
-    allumerF = True
-    allumerS = True
+    allumerF = False
+    allumerS = False
 
     result = dll.embedding(
         imgInputPath.encode("utf-8"),
