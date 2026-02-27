@@ -13,7 +13,7 @@ def getIdentity(app, path):
     faces = sorted(faces, key = lambda f: f.bbox[2] * f.bbox[3], reverse = True)
     emb = faces[0].normed_embedding
 
-    return emb
+    return emb, faces[0].bbox
 
 def quantifier(x, c = 0.25):
     x = np.asarray(x, dtype = np.float32)
@@ -59,8 +59,11 @@ def decodeECC(data, nsym):
 
 def createAnchor(cornerID):
     anchor = np.zeros((7, 7), dtype = np.uint8)
+
     anchor[0, :] = 1
+    anchor[6, :] = 1
     anchor[:, 0] = 1
+    anchor[:, 6] = 1
     anchor[3, 3] = 1
 
     b0 = (cornerID >> 0) & 1
@@ -71,13 +74,18 @@ def createAnchor(cornerID):
     return anchor
 
 def downloadQRimage(code, path):
-    margin = 5
-    img = (code * 255).astype(np.uint8)
+    margin = 0
+    img = ((1-code) * 255).astype(np.uint8)
 
     H, W = img.shape
-    margin = 5
     canvas = np.full((H + 2*margin, W + 2*margin), 255, dtype = np.uint8)
     canvas[margin : margin + H, margin : margin + W] = img
 
+    canvas = cv2.resize(
+        canvas,
+        (canvas.shape[1]*10, canvas.shape[0]*10),
+        interpolation=cv2.INTER_NEAREST
+    )
+
     os.makedirs(os.path.dirname(path), exist_ok = True)
-    Image.fromarray(img, mode = "L").save(path)
+    Image.fromarray(canvas, mode = "L").save(path)
