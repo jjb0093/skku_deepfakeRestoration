@@ -3,23 +3,20 @@ from module import quantifier, dequantifier
 from module import createHeader, confirmerHeader
 from module import createECC, decodeECC
 from module import createAnchor
+from module import expandBbox, usableBlock
 
-import pickle, zlib, cv2
+import pickle
 import numpy as np
+import ctypes as ct
+import jpegio as jio
+from pathlib import Path
 
 from insightface.app import FaceAnalysis
 app = FaceAnalysis(name="buffalo_l")
 app.prepare(ctx_id=0, det_size=(640, 640))
 
 def getCode(path):
-    '''
-    path = r"Data\train\n000002\0001_01.jpg"
-    emb = getIdentity(app, path)
-    '''
-    #path = r"Embedding\train\n000002\0002_01.pkl"
-
-    with open(path, 'rb') as f:
-        emb = pickle.load(f)
+    emb, bbox = getIdentity(app, path)
     embQ = quantifier(emb).tobytes()
 
     header = createHeader(embQ)
@@ -52,5 +49,74 @@ def getCode(path):
 
     if(idx != len(data_bits)): print("Length ERROR")
 
-    QRfilePath = path.replace("Embedding", "QRimage").replace("pkl", "png")
+    QRfilePath = "testData/testQRimage.png"
     downloadQRimage(code, QRfilePath)
+    
+    #with open("testData/testQRCode.pkl", 'wb') as f:
+    #    pickle.dump(code, f)
+
+    return code, bbox
+
+def steganoInfo(code, bbox, path):
+    codeShape = len(code)
+    codeBit = code.reshape(-1).astype(np.uint8)
+    
+    imgInputPath = path
+    imgOutputPath = imgInputPath.split('.')[0] + "_stegano." + imgInputPath.split('.')[-1]
+
+    imgJpeg = jio.read(imgInputPath)
+    coef = imgJpeg.coef_arrays[0]
+    h, w = imgJpeg.image_height, imgJpeg.image_width
+    hc, wc = coef.shape
+
+    bbox = expandBbox(bbox, h, w, 0.2)
+    usable = usableBlock(hc, wc, bbox)
+
+    margin = [max(0, (bbox[0]//8) - (codeShape//2)), max(0, ((bbox[3]-bbox[1])//2//8) - (codeShape//2))]
+
+    print("coef.shape =", (hc, wc), "blocks =", (hc//8, wc//8), flush=True)
+    print("usable.len =", len(usable), "usable.sum =", int(usable.sum()), flush=True)
+    print("bits.len   =", len(codeBit), flush=True)
+
+    dll_path = Path(__file__).resolve().parent / "infoInsertion.dll"
+    dll = ct.CDLL(str(dll_path))
+
+    uvPair = ct.c_int * 2
+
+    dll.embedding.argtypes = [
+        ct.c_char_p, ct.c_char_p,
+        ct.POINTER(ct.c_ubyte), ct.c_size_t,
+        ct.POINTER(ct.c_ubyte),
+        ct.c_int, ct.c_int,
+        ct.POINTER(uvPair), ct.c_int, ct.c_int,
+        ct.c_int, ct.c_int
+    ]
+    dll.embedding.restype = ct.c_int
+
+    uvList = (uvPair * 2)(uvPair(2, 3), uvPair(3, 2))
+    uvCount = ct.c_int(2)
+
+    bitsPtr = codeBit.ctypes.data_as(ct.POINTER(ct.c_ubyte))
+    usablePtr = usable.ctypes.data_as(ct.POINTER(ct.c_ubyte))
+
+    allumerF = False
+    allumerS = False
+
+    result = dll.embedding(
+        imgInputPath.encode("utf-8"),
+        imgOutputPath.encode("utf-8"),
+        bitsPtr, ct.c_size_t(len(codeBit)),
+        usablePtr,
+        ct.c_int(margin[0]), ct.c_int(margin[1]),
+        uvList, uvCount,
+        ct.c_int(codeShape), ct.c_int(1 if(allumerF) else 0), ct.c_int(1 if(allumerS) else 0),
+        ct.c_int(bbox[0]), ct.c_int(bbox[1]), ct.c_int(bbox[2]), ct.c_int(bbox[3]), 
+    )
+
+    print("Embedding Result =", result)
+
+if(__name__ == "__main__"):
+    path = "testData/testImage.jpg"
+    code, bbox = getCode(path)
+    steganoInfo(code, bbox, path)
+
