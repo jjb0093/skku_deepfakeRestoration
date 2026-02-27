@@ -43,6 +43,12 @@ DLL_EXPORT int embedding(
 	src.err = jpeg_std_error(&jerr_src);
 	jpeg_create_decompress(&src);
 	jpeg_stdio_src(&src, inputImage);
+
+	for (int m = 0; m < 16; m++) {
+		jpeg_save_markers(&src, JPEG_APP0 + m, 0xFFFF);
+	}
+	jpeg_save_markers(&src, JPEG_COM, 0xFFFF);
+
 	if (jpeg_read_header(&src, TRUE) != JPEG_HEADER_OK) {
 		printf("No Header\n");
 		return 0;
@@ -128,6 +134,11 @@ DLL_EXPORT int embedding(
 	dst.optimize_coding = TRUE;
 
 	jpeg_write_coefficients(&dst, coefArrays);
+	jpeg_saved_marker_ptr marker;
+	for (marker = src.marker_list; marker != NULL; marker = marker->next) {
+		jpeg_write_marker(&dst, marker->marker, marker->data, marker->data_length);
+	}
+
 	jpeg_finish_compress(&dst);
 	jpeg_finish_decompress(&src);
 
