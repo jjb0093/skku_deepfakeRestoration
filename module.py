@@ -89,3 +89,26 @@ def downloadQRimage(code, path):
 
     os.makedirs(os.path.dirname(path), exist_ok = True)
     Image.fromarray(canvas, mode = "L").save(path)
+
+def expandBbox(bbox, img_h, img_w, margin = 0.1):
+    x1, y1, x2, y2 = bbox
+    h, w = y2 - y1, x2 - x1
+
+    dx, dy = int(w * margin), int(h * margin)
+    bboxNew = [max(0, int(x1 - dx)), max(0, int(y1 - dy)), min(img_w, int(x2 + dx)), min(img_h, int(y2 + dy))]
+
+    return bboxNew
+
+def usableBlock(hc, wc, bbox, block = 8):
+    block_x = wc // block
+    block_y = hc // block
+
+    usable = np.ones((block_y, block_x), dtype = np.uint8)
+    x1, y1, x2, y2 = bbox
+
+    bx1, bx2 = x1 // block, (x2 - 1) // block
+    by1, by2 = y1 // block, (y2 - 1) // block
+
+    usable[by1:by2+1, bx1:bx2+1] = 0
+
+    return np.ascontiguousarray(usable.reshape(-1), dtype = np.uint8)
